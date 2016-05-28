@@ -993,6 +993,7 @@ func _yylex(yylval *yySymType) int32 {
 	var cp *bytes.Buffer
 	var s *Sym
 	var str string
+	var lxb []byte
 
 	prevlineno = lineno
 
@@ -1459,7 +1460,23 @@ talph:
 	cp = nil
 	ungetc(c)
 
-	s = LookupBytes(lexbuf.Bytes())
+	lxb = lexbuf.Bytes()
+	if lxb[0] == '_' {
+		str = lexbuf.String()
+		switch str {
+		case "__LINE__":
+			lexbuf.Reset()
+			str = strconv.Itoa(int(lineno))
+			goto __LINE
+		case "__FILE__":
+			lexbuf.Reset()
+			lexbuf.WriteString(infile)
+			yylval.val.U = internString(lexbuf.Bytes())
+			return LLITERAL
+		}
+	}
+
+	s = LookupBytes(lxb)
 	if s.Lexical == LIGNORE {
 		goto l0
 	}
@@ -1475,6 +1492,7 @@ ncu:
 	ungetc(c)
 
 	str = lexbuf.String()
+__LINE:
 	yylval.val.U = new(Mpint)
 	mpatofix(yylval.val.U.(*Mpint), str)
 	if yylval.val.U.(*Mpint).Ovf {

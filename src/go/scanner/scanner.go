@@ -613,6 +613,16 @@ scanAgain:
 			switch tok {
 			case token.IDENT, token.BREAK, token.CONTINUE, token.FALLTHROUGH, token.RETURN:
 				insertSemi = true
+				if tok == token.IDENT {
+					switch lit {
+					case "__LINE__":
+						tok = token.INT
+						lit = strconv.Itoa(s.file.Line(pos))
+					case "__FILE__":
+						tok = token.STRING
+						lit = s.file.Name()
+					}
+				}
 			}
 		} else {
 			insertSemi = true
