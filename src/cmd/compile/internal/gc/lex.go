@@ -525,11 +525,41 @@ binop1:
 func (l *lexer) ident(c rune) {
 	cp := &lexbuf
 	cp.Reset()
+	start_c := c
 
 	// accelerate common case (7bit ASCII)
 	for isLetter(c) || isDigit(c) {
 		cp.WriteByte(byte(c))
 		c = l.getr()
+	}
+
+	if start_c == '_' {
+		found := false
+		str := cp.String()
+		switch str {
+		case "__LINE__":
+			found = true
+			x := new(Mpint)
+			x.SetString(strconv.Itoa(int(lineno)))
+			l.val.U = x
+			litbuf = ""
+		case "__FILE__":
+			found = true
+			cp.Reset()
+			cp.WriteString(infile)
+			l.val.U = internString(cp.Bytes())
+			litbuf = "string literal"
+		}
+		if found {
+			l.nlsemi = true
+			l.tok = LLITERAL
+			cp = nil
+			l.ungetr()
+			if Debug['x'] != 0 {
+				fmt.Printf("lex: %s\n", str)
+			}
+			return
+		}
 	}
 
 	// general case
